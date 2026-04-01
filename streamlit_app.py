@@ -1,9 +1,8 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from PIL import Image
 
-
-st.title("CongressBookers helper")
 
 st.set_page_config(
     page_title="CB helper",
@@ -17,8 +16,7 @@ st.set_page_config(
     # },
 )
 
-# st.image('./CongressBookers_template word-02')
-a
+
 def compute_distance(
         hotel_longitude: float,
         hotel_latitude: float,
@@ -45,57 +43,51 @@ def find_the_best_match(dest_longitude, dest_latitude, df):
         dest_longitude,
         dest_latitude
     )
+    return df.sort_values(by='distance')
 
-    # Sort by distance (ascending) so the shortest is first
-    df_sorted = df.sort_values(by='distance')
 
-    return df_sorted
+left_co, cent_co, last_co = st.columns([1, 4, 1])
 
-st.markdown(
-    "Introduce the Longitude and Latitude of the desired tourist destination and let the algorithm make your job easier! "
-)
+with cent_co:
+    # Logo
+    try:
+        image = Image.open('./images/CBlogo.png')
+        st.image(image, use_container_width=True)
+    except FileNotFoundError:
+        st.warning("Logo file not found. Please check the path.")
 
-cols = st.columns(2)
-dest_longitude = cols[0].number_input(
-    label="Longitude",
-    help="Enter the longitude of the desired tourist destination",
-    # value=0.00,
-)
-dest_latitude = cols[1].number_input(
-    label="Latitude",
-    help="Enter the latitude of the desired tourist destination",
-    # value=0.00,
-)
+    # Inputs
+    cols = st.columns(2)
+    dest_latitude = cols[0].number_input(
+        label="Destination latitude",
+        help="Enter the latitude of the desired tourist destination",
+    )
+    dest_longitude = cols[1].number_input(
+        label="Destination longitude",
+        help="Enter the longitude of the desired tourist destination",
+    )
 
-uploaded_files = st.file_uploader(
-    "Choose a CSV file",
-    accept_multiple_files=True,
-    type=['csv']
-)
-for uploaded_file in uploaded_files:
-    df = pd.read_csv(uploaded_file)
+    uploaded_files = st.file_uploader(
+        "Choose a CSV file",
+        accept_multiple_files=True,
+        type=['csv']
+    )
 
-    st.write("Uploaded the filename:", uploaded_file.name)
+    for uploaded_file in uploaded_files:
+        df = pd.read_csv(uploaded_file)
+        st.info(f"Uploaded: {uploaded_file.name}")
 
-    if 'longitude' in df.columns and 'latitude' in df.columns:
-        df = df.dropna(subset=['longitude', 'latitude'])
+        if 'longitude' in df.columns and 'latitude' in df.columns:
+            df = df.dropna(subset=['longitude', 'latitude'])
 
-        # hotel_longitudes = df['longitude']
-        # st.write("First 5 Longitudes:", hotel_longitudes[:4])
+            if st.button("Calculate", use_container_width=True):
+                if not df.empty:
+                    results = find_the_best_match(dest_longitude, dest_latitude, df)
+                    shortest_dist = results['distance'].iloc[0]
 
-    if st.button("Calculate"):
-        if not df.empty:
-            # Get the processed dataframe
-            results = find_the_best_match(dest_longitude, dest_latitude, df)
-
-            # Get the very shortest distance (first row)
-            shortest_dist = results['distance'].iloc[0]
-            closest_hotel = results.iloc[0]  # Assuming there's a 'hotel_name' column
-
-            st.success(f"The shortest distance is {shortest_dist:.4f}")
-
-            # Show the full list or the top 5
-            st.write("Closest hotels found:")
-            st.dataframe(results[['name', 'longitude', 'latitude', 'distance']].head(10))
-        else:
-            st.error("Please upload a file first!")
+                    st.success(f"The shortest distance is {shortest_dist:.4f}")
+                    st.write("### Closest hotels found:")
+                    st.dataframe(results[['name', 'longitude', 'latitude', 'distance']].head(10),
+                                 use_container_width=True)
+                else:
+                    st.error("The uploaded file is empty or missing data!")
